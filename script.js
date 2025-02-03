@@ -4,6 +4,64 @@ const modal = document.getElementById('addEventModal');
 const closeModalButton = document.querySelector('.close');
 const eventForm = document.getElementById('eventForm');
 
+// Array para armazenar os eventos
+let events = [];
+
+// Função para salvar eventos no localStorage
+function saveEvents() {
+  localStorage.setItem('events', JSON.stringify(events));
+}
+
+// Função para carregar eventos na linha do tempo
+function loadEvents() {
+  timeline.innerHTML = ''; // Limpa a linha do tempo antes de carregar
+  events.forEach((event, index) => {
+    const eventElement = document.createElement('div');
+    eventElement.classList.add('event');
+    eventElement.innerHTML = `
+      <h3>${event.title}</h3>
+      <p class="date">📅 ${event.date}</p>
+      <p>${event.description}</p>
+      ${event.photo ? `<img src="${event.photo}" alt="${event.title}">` : ''}
+      <button class="delete-btn" data-index="${index}">×</button>
+    `;
+    timeline.appendChild(eventElement);
+  });
+
+  // Adiciona eventos de clique aos botões de exclusão
+  document.querySelectorAll('.delete-btn').forEach(button => {
+    button.addEventListener('click', () => {
+      const index = button.getAttribute('data-index');
+      events.splice(index, 1); // Remove o evento do array
+      saveEvents(); // Atualiza o localStorage
+      loadEvents(); // Recarrega os eventos na tela
+    });
+  });
+}
+
+// Função para carregar eventos do arquivo JSON
+async function loadEventsFromJSON() {
+  try {
+    const response = await fetch('events.json'); // Carrega o arquivo JSON
+    const data = await response.json();
+    events = data; // Atualiza o array de eventos
+    loadEvents(); // Exibe os eventos na linha do tempo
+  } catch (error) {
+    console.error('Erro ao carregar eventos:', error);
+  }
+}
+
+// Função para exportar eventos como JSON
+document.getElementById('exportButton').addEventListener('click', () => {
+  const data = JSON.stringify(events, null, 2); // Formata o JSON
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'events.json'; // Nome do arquivo
+  a.click();
+});
+
 // Abrir modal
 openModalButton.addEventListener('click', () => {
   modal.style.display = 'flex';
@@ -31,7 +89,17 @@ eventForm.addEventListener('submit', (e) => {
   const eventPhoto = document.getElementById('eventPhoto').files[0];
 
   if (eventTitle && eventDate && eventDescription) {
-    addEvent(eventTitle, eventDate, eventDescription, eventPhoto);
+    const newEvent = {
+      title: eventTitle,
+      date: eventDate,
+      description: eventDescription,
+      photo: eventPhoto ? URL.createObjectURL(eventPhoto) : null, // Converte a foto para URL
+    };
+
+    events.push(newEvent); // Adiciona o novo evento ao array
+    saveEvents(); // Salva no localStorage
+    loadEvents(); // Recarrega os eventos na tela
+
     eventForm.reset(); // Limpa o formulário
     modal.style.display = 'none'; // Fecha o modal
   } else {
@@ -39,22 +107,5 @@ eventForm.addEventListener('submit', (e) => {
   }
 });
 
-// Função para adicionar um evento
-function addEvent(title, date, description, photo) {
-  const eventElement = document.createElement('div');
-  eventElement.classList.add('event');
-  eventElement.innerHTML = `
-    <h3>${title}</h3>
-    <p class="date">📅 ${date}</p>
-    <p>${description}</p>
-    ${photo ? `<img src="${URL.createObjectURL(photo)}" alt="${title}">` : ''}
-    <button class="delete-btn">×</button>
-  `;
-  timeline.appendChild(eventElement);
-
-  // Adiciona o evento de clique ao botão de exclusão
-  const deleteButton = eventElement.querySelector('.delete-btn');
-  deleteButton.addEventListener('click', () => {
-    eventElement.remove(); // Remove o evento da linha do tempo
-  });
-}
+// Carrega os eventos ao abrir a página
+loadEventsFromJSON();
