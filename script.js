@@ -5,7 +5,7 @@ const closeModalButton = document.querySelector('.close');
 const eventForm = document.getElementById('eventForm');
 
 // Array para armazenar os eventos
-let events = [];
+let events = JSON.parse(localStorage.getItem('events')) || [];
 
 // Função para salvar eventos no localStorage
 function saveEvents() {
